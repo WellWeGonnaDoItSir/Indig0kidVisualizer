@@ -20,7 +20,7 @@ const bundledStudio = studio.replace(/^export function /gm, 'function ');
 const js = bundledProject + '\n' + bundledScenes + '\n' + bundledStudio + '\n' + bundledConfig + '\n' + app.replace(sceneImport, '').replace(studioImport, '').replace(configImport, '').replace(projectImport, '');
 const html = template
   .replace('Indig0kid Visual — Free music visualizer', 'Vizual Indig0kid — Artwork studio')
-  .replace('<link rel="icon" href="./favicon.svg">', '')
+  .replace(/<link rel="icon"[^>]*>/g, '')
   .replace('class="brand" href="./"', 'class="brand" href="#"')
   .replace('<a class="privacy-link" href="./privacy.html" target="_blank" rel="noopener">Privacy</a> ', '')
   .replace('<link rel="stylesheet" href="./style.css">', `<style>${css}</style>`)
