@@ -4,7 +4,7 @@ import { resolve, join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const output = process.argv[2] ? resolve(process.argv[2]) : join(root, 'dist');
+const output = process.argv[2] ? resolve(process.argv[2]) : join(root, 'desktop');
 const [template, css, app, scenes, studio, config, project] = await Promise.all(['index.html', 'style.css', 'app.js', 'scenes.js', 'studio.js', 'site-config.js', 'project.js'].map(name => readFile(join(root, name), 'utf8')));
 const sceneImport = "import { SCENES, renderScene } from './scenes.js';";
 const studioImport = "import { createStudio } from './studio.js';";

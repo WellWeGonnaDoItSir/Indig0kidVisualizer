@@ -4,11 +4,11 @@ A local, bass-reactive music visualizer with 20 animated scenes, color palettes,
 
 ## Publish the free website
 
-`npm run build` creates a public static website in `site/`. Only the application files, public configuration, favicon, privacy page, and `.nojekyll` marker are copied. The Node server, Desktop installers, repository metadata, and user assets are excluded. Relative assets and module imports support a project subpath such as `/Indig0kidVisualizer/`.
+`npm ci` installs the locked Vite development dependencies. `npm run build` produces the production website in `dist/`, using the GitHub Pages base path `/Indig0kidVisualizer/` configured in `vite.config.js`. Both the application and privacy page are built; source scripts, Desktop installers, user media, repository metadata and secrets are excluded.
 
-`npm run publish:pages` builds and pushes only these public assets to the `gh-pages` branch using the existing Git HTTPS authentication. It preserves earlier deployments in Git history and refuses to overwrite an unrecognized Pages branch. It does not switch the development checkout or create a worktree. Enable GitHub Pages in repository Settings → Pages with **Deploy from a branch**, branch **gh-pages**, folder **/(root)**. A push does not establish successful hosting; confirm the Pages build and test the published HTTPS URL. Private repositories may require a paid GitHub plan for Pages; keep the repository's current visibility unless the owner explicitly changes it. Static `site/` files can instead be uploaded to a free static host that supports private-source projects.
+The `.github/workflows/deploy-pages.yml` workflow runs on pushes to `main` and supports manual dispatch. It installs dependencies with `npm ci`, validates the JavaScript and project-save tests, runs `npm run build`, uploads only `dist/`, and deploys the artifact with GitHub Pages. Deployment uses the workflow's automatic token and does not require payment keys or a personal token in source. In repository **Settings → Pages**, select **GitHub Actions** as the build/deployment source. A successful push is not proof of a live website: check the workflow deployment result. The intended URL is `https://wellwegonnadoitsir.github.io/Indig0kidVisualizer/`. Private repositories may require a GitHub plan that supports Pages; repository visibility is preserved.
 
-All visualizer functions remain free. To activate the optional **Donate $1 if you want ♥** link, set `donationUrl` in `site-config.js` to the owner's actual public HTTPS payment page and republish. Without a real link the donation section stays hidden. Never store card numbers, bank-account numbers, passwords, or payment API keys in this public configuration. Payment is handled entirely by the external provider; its fees and supported amounts apply. There are no paywalls or payment forms in the application.
+All visualizer functions remain free. To activate the optional **Donate 1$ if you want 😄** link, set `donationUrl` in `site-config.js` to the owner's actual public HTTPS payment page and republish. Without a real link the donation section stays hidden. Never store card numbers, bank-account numbers, passwords, or payment API keys in this public configuration. Payment is handled entirely by the external provider; its fees and supported amounts apply. There are no paywalls or payment forms in the application.
 
 ## Save and resume without an account
 
@@ -43,21 +43,22 @@ Visual direction was informed by the procedural preset approach documented in [p
 npm run desktop
 ```
 
-Creates `dist/Vizual Indig0kid.html` and `dist/Azuriraj-Vizual-Indig0kid-Artwork.ps1`. The HTML bundles all application JavaScript and CSS and needs no local server or Node.js on the user's computer. Open it with Edge, Chrome, or Firefox. Online fonts are optional and have local fallbacks.
+Creates `desktop/Vizual Indig0kid.html` and `desktop/Azuriraj-Vizual-Indig0kid-Artwork.ps1`. The HTML bundles all application JavaScript and CSS and needs no local server or Node.js on the user's computer. Open it with Edge, Chrome, or Firefox. Online fonts are optional and have local fallbacks.
 
 Users can copy the complete PowerShell script into PowerShell to create/update the HTML on their Windows Desktop. It preserves any existing `Vizual Indig0kid.html` as a timestamped backup before replacement. Node.js is only needed to build this distribution, not to use it. Cloud Chromium policy blocks direct `file://` navigation; standalone content is tested over an intercepted local HTTP response instead.
 
-For the clearly named final distribution, run `npm run desktop:final`. This rebuilds the latest application and creates `dist/Indig0kid Visual Final Program/Indig0kid Visual Final Program.html`, a short usage guide, and `dist/Instaliraj-Indig0kid-Visual-Final-Program.ps1`. The installer creates that same folder on the Windows Desktop, backs up an existing final HTML inside `Prethodne verzije`, and opens the application. It does not remove old Desktop files.
+For the clearly named final distribution, run `npm run desktop:final`. This rebuilds the latest application and creates `desktop/Indig0kid Visual Final Program/Indig0kid Visual Final Program.html`, a short usage guide, and `desktop/Instaliraj-Indig0kid-Visual-Final-Program.ps1`. The installer creates that same folder on the Windows Desktop, backs up an existing final HTML inside `Prethodne verzije`, and opens the application. It does not remove old Desktop files.
 
 ## Run
 
-Requires Node.js 20 or newer. No dependency installation is needed.
+Requires Node.js 22.12 or newer. Install development dependencies from the lockfile.
 
 ```sh
+npm ci
 npm run dev
 ```
 
-The server listens on port 3000 (`PORT` overrides it). Open it in a modern browser. Upload a browser-supported audio file or choose the demo, then press Play. Bass intensity drives isolated 25–180 Hz waveform energy, rapid kick detection, ring expansion, vibration, and outgoing shockwaves. The response has a fast attack at every smoothing setting; Motion smoothing controls the release only. The live bass meter shows detected low-frequency energy. Audio detail adds higher-frequency motion. Listening volume does not change the exported audio level.
+Vite prints its local development address. Use `npm run dev -- --port 3000` to choose a port. Open it in a modern browser. Upload a browser-supported audio file or choose the demo, then press Play. Bass intensity drives isolated 25–180 Hz waveform energy, rapid kick detection, ring expansion, vibration, and outgoing shockwaves. The response has a fast attack at every smoothing setting; Motion smoothing controls the release only. The live bass meter shows detected low-frequency energy. Audio detail adds higher-frequency motion. Listening volume does not change the exported audio level.
 
 ## Export
 
@@ -71,6 +72,8 @@ Fullscreen requires browser support and a user gesture. Font loading uses Google
 
 ```sh
 npm run check
+npm test
+npm run build
 ```
 
 This checks JavaScript syntax. To validate playback and export, run the demo in a browser, switch scenes and palettes, seek, adjust bass, then export the 16-second demo and confirm the downloaded video includes audio.

@@ -6,7 +6,7 @@ import { gzipSync, gunzipSync } from 'node:zlib';
 // Always rebuild the latest application before creating the clearly named final copy.
 await import('./package-desktop.mjs');
 const root = fileURLToPath(new URL('../', import.meta.url));
-const output = process.argv[2] ? resolve(process.argv[2]) : join(root, 'dist');
+const output = process.argv[2] ? resolve(process.argv[2]) : join(root, 'desktop');
 const name = 'Indig0kid Visual Final Program';
 const current = await readFile(join(output, 'Vizual Indig0kid.html'), 'utf8');
 const html = current.replace('<title>Vizual Indig0kid — Artwork studio</title>', `<title>${name}</title>`);
