@@ -25,3 +25,9 @@ header.studio-header{display:grid;grid-template-columns:1fr;justify-items:center
 @media(max-width:900px){.stage-column>.section-label{grid-row:7}.gallery-toolbar{grid-row:8}.scenes{grid-row:9}.gallery-hint{grid-row:10}.note{grid-row:11}}
 
 .donate-button[aria-disabled="true"]{cursor:default}
+
+/* Donation belongs to the website header, outside the video. */
+.header-donation{position:absolute;left:0;top:24px;text-align:left}
+.header-donation .donate-button{font-size:11px;padding:11px 14px}
+@media(max-width:1150px){header.studio-header{padding-top:76px}.header-donation{top:17px}}
+@media(max-width:600px){header.studio-header{padding-top:76px}.header-donation{top:12px}.header-donation .donate-button{font-size:9px;padding:10px}.studio-header .header-right{font-size:5px;gap:4px}.studio-header .version{margin-left:3px}}
