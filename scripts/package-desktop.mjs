@@ -5,16 +5,19 @@ import { gzipSync } from 'node:zlib';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const output = process.argv[2] ? resolve(process.argv[2]) : join(root, 'dist');
-const [template, css, app, scenes, studio, config] = await Promise.all(['index.html', 'style.css', 'app.js', 'scenes.js', 'studio.js', 'site-config.js'].map(name => readFile(join(root, name), 'utf8')));
+const [template, css, app, scenes, studio, config, project] = await Promise.all(['index.html', 'style.css', 'app.js', 'scenes.js', 'studio.js', 'site-config.js', 'project.js'].map(name => readFile(join(root, name), 'utf8')));
 const sceneImport = "import { SCENES, renderScene } from './scenes.js';";
 const studioImport = "import { createStudio } from './studio.js';";
 if (!app.includes(sceneImport) || !app.includes(studioImport)) throw new Error('Application imports changed; update the standalone packager.');
 const configImport = "import { SITE_CONFIG } from './site-config.js';";
 if (!app.includes(configImport)) throw new Error('Site configuration import changed.');
+const projectImport = "import { encodeProject, decodeProject } from './project.js';";
+if (!app.includes(projectImport)) throw new Error('Project import changed.');
+const bundledProject = project.replace(/^export (async function|function) /gm, '$1 ');
 const bundledConfig = config.replace(/^export const /gm, 'const ');
 const bundledScenes = scenes.replace(/^export (const|function) /gm, '$1 ');
 const bundledStudio = studio.replace(/^export function /gm, 'function ');
-const js = bundledScenes + '\n' + bundledStudio + '\n' + bundledConfig + '\n' + app.replace(sceneImport, '').replace(studioImport, '').replace(configImport, '');
+const js = bundledProject + '\n' + bundledScenes + '\n' + bundledStudio + '\n' + bundledConfig + '\n' + app.replace(sceneImport, '').replace(studioImport, '').replace(configImport, '').replace(projectImport, '');
 const html = template
   .replace('Indig0kid Visual — Free music visualizer', 'Vizual Indig0kid — Artwork studio')
   .replace('<link rel="icon" href="./favicon.svg">', '')
@@ -22,7 +25,7 @@ const html = template
   .replace('<a class="privacy-link" href="./privacy.html" target="_blank" rel="noopener">Privacy</a> ', '')
   .replace('<link rel="stylesheet" href="./style.css">', `<style>${css}</style>`)
   .replace('<script type="module" src="./app.js"></script>', `<script type="module">${js}</script>`);
-if (html.includes('src="./app.js"') || html.includes('href="./style.css"') || html.includes(sceneImport) || html.includes(studioImport) || html.includes(configImport)) throw new Error('Standalone bundle contains an external application dependency.');
+if (html.includes('src="./app.js"') || html.includes('href="./style.css"') || html.includes(sceneImport) || html.includes(studioImport) || html.includes(configImport) || html.includes(projectImport)) throw new Error('Standalone bundle contains an external application dependency.');
 const payload = gzipSync(Buffer.from(html, 'utf8')).toString('base64');
 const installer = `# Vizual Indig0kid - Artwork studio: 20 scenes, background, cover art, and text.
 # Copy ALL of this script and paste into Windows PowerShell, then press Enter.

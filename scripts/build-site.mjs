@@ -4,7 +4,7 @@ import { join } from 'node:path';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const output = join(root, 'site');
-const files = ['index.html', 'style.css', 'app.js', 'scenes.js', 'studio.js', 'site-config.js', 'privacy.html', 'favicon.svg'];
+const files = ['index.html', 'style.css', 'app.js', 'scenes.js', 'studio.js', 'site-config.js', 'project.js', 'privacy.html', 'favicon.svg'];
 await mkdir(output, { recursive: true });
 for (const file of files) await copyFile(join(root, file), join(output, file));
 const html = await readFile(join(output, 'index.html'), 'utf8');

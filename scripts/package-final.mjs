@@ -20,7 +20,9 @@ Ovo je Artwork Studio verzija: 20 stilova, jak bass odziv, background image,
 centralni cover art, do 5 tekstualnih slojeva, sopstveni fontovi i video export.
 Nisu potrebni Node.js, PowerShell ili ovaj chat za svakodnevno pokretanje.
 
-Pesmu, slike, tekst i dodate fontove ponovo ucitaj kada otvoris program.
+Save project cuva pesmu, slike, tekst, fontove i podesavanja u .indig0kid fajl.
+Sledeci put koristi Import save da nastavis gde si stao, bez naloga.
+Izaberi Desktop u dijalogu; inace proveri Downloads.
 Izvezeni video ostaje u Downloads folderu ili na mestu koje izaberes.
 
 Kada proveris ovu kopiju, stare Vizual Indig0kid HTML fajlove i njihove backup

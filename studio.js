@@ -3,6 +3,7 @@ export function createStudio({ toast, getColor }) {
   const artwork = { background: null, cover: null };
   const versions = { background: 0, cover: 0 };
   const pending = new Set();
+  const customAssets = new Map();
   const fonts = new Map([
     ['grotesk', '"Space Grotesk", Arial, sans-serif'], ['dm', '"DM Sans", Arial, sans-serif'],
     ['bebas', '"Bebas Neue", Impact, sans-serif'], ['montserrat', 'Montserrat, Arial, sans-serif'],
@@ -28,7 +29,7 @@ export function createStudio({ toast, getColor }) {
       const factor = Math.min(1, 2560 / Math.max(image.naturalWidth, image.naturalHeight));
       const bitmap = document.createElement('canvas'); bitmap.width = Math.max(1, Math.round(image.naturalWidth * factor)); bitmap.height = Math.max(1, Math.round(image.naturalHeight * factor));
       bitmap.getContext('2d').drawImage(image, 0, 0, bitmap.width, bitmap.height);
-      artwork[kind] = { bitmap, name: file.name };
+      artwork[kind] = { bitmap, name: file.name, file };
       const mini = document.createElement('canvas'); mini.width = 96; mini.height = 96;
       const side = Math.min(bitmap.width, bitmap.height); mini.getContext('2d').drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, 96, 96);
       const thumbnail = new Image(); thumbnail.src = mini.toDataURL('image/jpeg', 0.7); thumbnail.alt = '';
@@ -95,6 +96,7 @@ export function createStudio({ toast, getColor }) {
       const id = `custom-${++customFont}`, family = `Indig0kidCustom${customFont}`;
       const face = new FontFace(family, await file.arrayBuffer()); await face.load(); document.fonts.add(face);
       fonts.set(id, `"${family}", Arial, sans-serif`); $('text-font').add(new Option(file.name.replace(/\.[^.]+$/, '') + ' · moj font', id));
+      customAssets.set(id, { name: file.name, blob: file, face });
       active().font = id; syncEditor(); toast('Tvoj font je učitan i biće korišćen u exportu.');
     } catch { toast('Font nije moguće učitati. Probaj drugi TTF ili WOFF2 fajl.'); }
     finally { $('font-file').value = ''; }
@@ -159,6 +161,66 @@ export function createStudio({ toast, getColor }) {
   }
   return {
     drawBackground, drawCover, drawText,
+    async snapshot(assets) {
+      await Promise.all([...pending]);
+      const add = (name, blob) => { const index = assets.length; assets.push({ name, blob }); return index; };
+      return {
+        images: Object.fromEntries(Object.entries(artwork).map(([kind, asset]) => [kind, asset ? add(asset.name, asset.file) : null])),
+        customFonts: [...customAssets].map(([id, asset]) => ({ id, asset: add(asset.name, asset.blob) })),
+        layers: layers.map(layer => ({ ...layer })), selected,
+        settings: { opacity: Number($('background-opacity').value), coverSize: Number($('cover-size').value), pulse: $('cover-pulse').checked, border: $('cover-border').checked }
+      };
+    },
+    async prepareRestore(state, assets) {
+      const fail = () => { throw new Error('Save sadrži neispravna artwork/text podešavanja.'); };
+      const range = (n, min, max) => typeof n === 'number' && Number.isFinite(n) && n >= min && n <= max;
+      const assetAt = index => { if (!Number.isInteger(index) || !assets[index]) fail(); return assets[index]; };
+      if (!state || !state.images || !Array.isArray(state.customFonts) || state.customFonts.length > 10 || !Array.isArray(state.layers) || state.layers.length < 1 || state.layers.length > 5 || !state.settings) fail();
+      const settings = state.settings;
+      if (!range(settings.opacity, 0, 100) || !range(settings.coverSize, 12, 45) || typeof settings.pulse !== 'boolean' || typeof settings.border !== 'boolean') fail();
+      const restoredFonts = new Map(), restoredImages = {};
+      for (const item of state.customFonts) {
+        if (!item || typeof item.id !== 'string' || !/^custom-\d+$/.test(item.id) || restoredFonts.has(item.id)) fail();
+        const asset = assetAt(item.asset); if (asset.blob.size > 10 * 1024 * 1024 || !/\.(ttf|otf|woff2?)$/i.test(asset.name)) fail();
+        const family = `Indig0kidRestored${Date.now()}_${restoredFonts.size}`;
+        const face = new FontFace(family, await asset.blob.arrayBuffer()); await face.load();
+        restoredFonts.set(item.id, { ...asset, face, family });
+      }
+      const ids = new Set();
+      for (const layer of state.layers) {
+        if (!layer || !Number.isSafeInteger(layer.id) || layer.id < 1 || layer.id > 1000000 || ids.has(layer.id) || typeof layer.text !== 'string' || layer.text.length > 400 || typeof layer.font !== 'string' || !(restoredFonts.has(layer.font) || (fonts.has(layer.font) && !layer.font.startsWith('custom-'))) || !/^#[0-9a-f]{6}$/i.test(layer.color) || !range(layer.size, 24, 180) || !range(layer.spacing, 0, 20) || !range(layer.x, 5, 95) || !range(layer.y, 5, 95) || !['left', 'center', 'right'].includes(layer.align) || ['bold', 'italic', 'shadow'].some(key => typeof layer[key] !== 'boolean')) fail();
+        ids.add(layer.id);
+      }
+      if (!ids.has(state.selected)) fail();
+      for (const kind of ['background', 'cover']) {
+        if (state.images[kind] === null) { restoredImages[kind] = null; continue; }
+        const asset = assetAt(state.images[kind]); if (!/^image\/(png|jpeg|webp|avif)$/i.test(asset.blob.type) || asset.blob.size > 25 * 1024 * 1024) fail();
+        const url = URL.createObjectURL(asset.blob);
+        try {
+          const image = new Image(); image.src = url; await image.decode();
+          const factor = Math.min(1, 2560 / Math.max(image.naturalWidth, image.naturalHeight));
+          const bitmap = document.createElement('canvas'); bitmap.width = Math.max(1, Math.round(image.naturalWidth * factor)); bitmap.height = Math.max(1, Math.round(image.naturalHeight * factor)); bitmap.getContext('2d').drawImage(image, 0, 0, bitmap.width, bitmap.height);
+          restoredImages[kind] = { bitmap, file: asset.blob, name: asset.name };
+        } finally { URL.revokeObjectURL(url); }
+      }
+      // Commit only after every image, font and field has been validated/decoded.
+      return () => {
+        for (const [id, item] of customAssets) { document.fonts.delete(item.face); fonts.delete(id); }
+        customAssets.clear(); [...$('text-font').options].filter(option => option.value.startsWith('custom-')).forEach(option => option.remove());
+        for (const [id, item] of restoredFonts) { document.fonts.add(item.face); fonts.set(id, `"${item.family}", Arial, sans-serif`); customAssets.set(id, item); $('text-font').add(new Option(item.name.replace(/\.[^.]+$/, '') + ' · moj font', id)); }
+        customFont = Math.max(0, ...[...restoredFonts.keys()].map(id => Number(id.slice(7))));
+        for (const kind of ['background', 'cover']) {
+          versions[kind]++; artwork[kind] = restoredImages[kind]; const item = artwork[kind];
+          if (item) { const thumbnail = new Image(); thumbnail.src = item.bitmap.toDataURL('image/jpeg', 0.6); thumbnail.alt = ''; $(kind + '-preview').replaceChildren(thumbnail); $(kind + '-name').textContent = item.name; }
+          else { $(kind + '-preview').textContent = kind === 'cover' ? 'ART' : 'BG'; $(kind + '-name').textContent = kind === 'cover' ? 'Omot pesme u centru scene' : 'Tvoja slika, preko celog videa'; }
+          $('remove-' + kind).disabled = !item;
+        }
+        layers.splice(0, layers.length, ...state.layers.map(layer => Object.fromEntries(['id', ...Object.keys(fields)].map(key => [key, layer[key]]))));
+        selected = state.selected; nextLayer = Math.max(...layers.map(layer => layer.id)) + 1;
+        $('background-opacity').value = settings.opacity; $('cover-size').value = settings.coverSize; $('cover-pulse').checked = settings.pulse; $('cover-border').checked = settings.border;
+        for (const id of ['background-opacity', 'cover-size']) $(id + '-value').textContent = $(id).value + '%'; syncEditor();
+      };
+    },
     setExporting(value) { locked = value; $('artwork-controls').disabled = value; $('text-controls').disabled = value; },
     async ready() { await Promise.all([...pending]); await Promise.all(layers.filter(layer => layer.text.trim()).map(loadFont)); await document.fonts.ready; }
   };

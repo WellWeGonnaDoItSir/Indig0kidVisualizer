@@ -3,5 +3,14 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "scripts": { "dev": "node server.js", "start": "node server.js", "check": "node --check app.js && node --check scenes.js && node --check studio.js && node --check site-config.js && node --check scripts/build-site.mjs && node --check scripts/publish-pages.mjs && node --check server.js && node --check scripts/package-desktop.mjs && node --check scripts/package-final.mjs", "build": "node scripts/build-site.mjs", "publish:pages": "node scripts/publish-pages.mjs", "desktop": "node scripts/package-desktop.mjs", "desktop:final": "node scripts/package-final.mjs" }
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "check": "node --check app.js && node --check scenes.js && node --check studio.js && node --check site-config.js && node --check project.js && node --check scripts/build-site.mjs && node --check scripts/publish-pages.mjs && node --check server.js && node --check scripts/package-desktop.mjs && node --check scripts/package-final.mjs",
+    "build": "node scripts/build-site.mjs",
+    "publish:pages": "node scripts/publish-pages.mjs",
+    "desktop": "node scripts/package-desktop.mjs",
+    "desktop:final": "node scripts/package-final.mjs",
+    "test": "node --test tests/*.test.mjs"
+  }
 }

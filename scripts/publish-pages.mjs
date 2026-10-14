@@ -21,7 +21,7 @@ const gitEnv = { ...process.env, GIT_INDEX_FILE: join(temporary, 'index') };
 const stage = args => run(args, { env: gitEnv });
 try {
   stage(['read-tree', '--empty']);
-  const files = ['index.html', 'style.css', 'app.js', 'scenes.js', 'studio.js', 'site-config.js', 'privacy.html', 'favicon.svg', '.nojekyll'];
+  const files = ['index.html', 'style.css', 'app.js', 'scenes.js', 'studio.js', 'site-config.js', 'project.js', 'privacy.html', 'favicon.svg', '.nojekyll'];
   const marker = Buffer.from(JSON.stringify({ application: 'Indig0kid Visual', sourceCommit: run(['rev-parse', 'HEAD']) }, null, 2) + '\n');
   for (const file of [...files, '.indig0kid-site.json']) {
     const content = file === '.indig0kid-site.json' ? marker : await readFile(join(root, 'site', file));

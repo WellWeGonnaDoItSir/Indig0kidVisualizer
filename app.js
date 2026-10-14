@@ -1,6 +1,7 @@
 import { SCENES, renderScene } from './scenes.js';
 import { createStudio } from './studio.js';
 import { SITE_CONFIG } from './site-config.js';
+import { encodeProject, decodeProject } from './project.js';
 const $ = id => document.getElementById(id);
 const canvas = $('visual'), ctx = canvas.getContext('2d'), audio = $('audio');
 if (SITE_CONFIG.donationUrl) {
@@ -23,7 +24,7 @@ document.querySelectorAll('.scene i').forEach(el => el.innerHTML = icons.arrow);
 const colors = { indigo: [167, 132, 255], mint: [104, 225, 205], rose: [244, 142, 185], amber: [244, 185, 105], ice: [205, 223, 255] };
 let color = colors.indigo, scene = 'orbit', audioContext, analyser, bassAnalyser, bassSamples, source, gain, recordingDestination;
 const studio = createStudio({ toast: message => toast(message), getColor: () => color });
-let bins, fullSamples, bass = 0, detail = 0, url, title = '', exporting = false, recorder, chunks = [], exportStream;
+let bins, fullSamples, bass = 0, detail = 0, url, title = '', trackBlob = null, trackName = '', projectBusy = false, exporting = false, recorder, chunks = [], exportStream;
 let bassBaseline = 0, previousBass = 0, kick = 0, hitCooldown = 0, vibrationPhase = 0;
 const shockwaves = [];
 let toastTimer, lastTime = 0, elapsed = 0, exportCancelled = false, exportGeneration = 0, previousVolume = 0.8;
@@ -69,10 +70,11 @@ function setTrack(blob, name) {
   if (exporting) return;
   audio.pause(); bass = 0; detail = 0; bassBaseline = 0; previousBass = 0; kick = 0; hitCooldown = 0; shockwaves.length = 0;
   if (url) URL.revokeObjectURL(url); url = URL.createObjectURL(blob); audio.src = url; audio.load();
+  trackBlob = blob; trackName = name;
   title = name.replace(/\.[^.]+$/, ''); $('track-title').textContent = title; $('track-subtitle').textContent = 'LOCAL AUDIO / READY TO PLAY'; $('current-time').textContent = '0:00'; $('duration').textContent = '0:00'; $('seek').value = 0;
 }
 async function loadFile(file) {
-  if (!file || exporting) return;
+  if (!file || exporting || projectBusy) return;
   if (!file.type.startsWith('audio/') && !/\.(mp3|wav|flac|m4a|ogg|aac|aiff|opus)$/i.test(file.name)) { toast('Izaberi audio fajl.'); return; }
   setTrack(file, file.name); try { await play(); } catch { toast('Pesma je učitana. Pritisni Play ili probaj drugi format.'); }
 }
@@ -131,6 +133,62 @@ document.querySelectorAll('.scene-filter').forEach(button => button.addEventList
 }));
 document.querySelectorAll('.swatch').forEach(button => button.addEventListener('click', () => { color = colors[button.dataset.color]; $('palette-name').textContent = button.dataset.color.toUpperCase(); for (const b of sceneButtons.values()) drawScenePreview(b); document.querySelectorAll('.swatch').forEach(b => { b.classList.toggle('selected', b === button); b.setAttribute('aria-pressed', String(b === button)); }); }));
 $('fullscreen').addEventListener('click', async () => { try { if (document.fullscreenElement) await document.exitFullscreen(); else await $('stage').requestFullscreen(); } catch { toast('Fullscreen nije dostupan u ovom browseru.'); } });
+const savedRanges = ['bass', 'detail', 'smooth', 'volume'];
+const savedToggles = ['particles', 'show-title'];
+function projectLock(value, message = '') {
+  projectBusy = value; document.querySelector('main').inert = value; studio.setExporting(value);
+  $('project-progress').hidden = !value; $('project-progress').textContent = message;
+}
+$('save-project').addEventListener('click', async () => {
+  if (exporting || projectBusy) return;
+  const wasPlaying = !audio.paused; audio.pause(); projectLock(true, 'Saving your project…');
+  try {
+    let handle;
+    const fileName = `${(title || 'Indig0kid-project').replace(/[^\p{L}\p{N}\s_-]/gu, '').slice(0, 80)}.indig0kid`;
+    if (window.showSaveFilePicker) {
+      try { handle = await window.showSaveFilePicker({ suggestedName: fileName, startIn: 'desktop', types: [{ description: 'Indig0kid project', accept: { 'application/octet-stream': ['.indig0kid'] } }] }); }
+      catch (error) { if (error.name === 'AbortError') return; if (!['SecurityError', 'NotAllowedError'].includes(error.name)) throw error; }
+    }
+    const assets = []; const artwork = await studio.snapshot(assets);
+    const audioIndex = trackBlob ? assets.push({ name: trackName, blob: trackBlob }) - 1 : null;
+    const state = { scene, palette: $('palette-name').textContent.toLowerCase(), controls: Object.fromEntries(savedRanges.map(id => [id, Number($(id).value)])), toggles: Object.fromEntries(savedToggles.map(id => [id, $(id).checked])), position: audio.currentTime || 0, elapsed, phase: vibrationPhase, audio: audioIndex, studio: artwork };
+    const blob = encodeProject(state, assets);
+    if (handle) { const stream = await handle.createWritable(); try { await stream.write(blob); await stream.close(); } catch (error) { await stream.abort().catch(() => {}); throw error; } toast('Projekat je sačuvan na mestu koje si izabrao.'); }
+    else { const link = document.createElement('a'), download = URL.createObjectURL(blob); link.href = download; link.download = fileName; document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(download), 60000); toast('Save fajl je preuzet. Proveri Downloads ili folder koji si izabrao.'); }
+  } catch (error) { toast('Save nije uspeo: ' + error.message); }
+  finally { projectLock(false); if (wasPlaying) audio.play().catch(() => {}); }
+});
+async function validateSavedAudio(asset) {
+  if (!asset) return;
+  if (!asset.blob.size || !(asset.blob.type.startsWith('audio/') || /\.(mp3|wav|flac|m4a|ogg|aac|aiff|opus)$/i.test(asset.name))) throw new Error('Save sadrži neispravan audio fajl.');
+  const probe = new Audio(), testUrl = URL.createObjectURL(asset.blob);
+  try { await new Promise((resolve, reject) => { const timeout = setTimeout(() => reject(new Error('Audio iz save fajla nije moguće učitati.')), 15000); probe.onloadedmetadata = () => { clearTimeout(timeout); Number.isFinite(probe.duration) && probe.duration > 0 ? resolve() : reject(new Error('Audio nije podržan.')); }; probe.onerror = () => { clearTimeout(timeout); reject(new Error('Audio iz save fajla nije podržan.')); }; probe.src = testUrl; probe.load(); }); }
+  finally { probe.removeAttribute('src'); probe.load(); URL.revokeObjectURL(testUrl); }
+}
+$('import-project').addEventListener('change', async event => {
+  const file = event.target.files[0]; if (!file || exporting || projectBusy) return;
+  const wasPlaying = !audio.paused; audio.pause(); projectLock(true, 'Restoring your project…'); let applied = false;
+  try {
+    await studio.ready(); const { state, assets } = await decodeProject(file);
+    const finite = (n, min, max) => typeof n === 'number' && Number.isFinite(n) && n >= min && n <= max;
+    if (!SCENES.some(preset => preset.id === state.scene) || !Object.hasOwn(colors, state.palette) || !state.controls || !state.toggles || savedRanges.some(id => !finite(state.controls[id], 0, id === 'volume' ? 1 : 100)) || savedToggles.some(id => typeof state.toggles[id] !== 'boolean') || !finite(state.position, 0, 86400 * 7) || !finite(state.elapsed, 0, 1e9) || !finite(state.phase, 0, 1e12) || (state.audio !== null && (!Number.isInteger(state.audio) || !assets[state.audio]))) throw new Error('Save sadrži neispravna podešavanja.');
+    await validateSavedAudio(state.audio === null ? null : assets[state.audio]);
+    const applyArtwork = await studio.prepareRestore(state.studio, assets);
+    applyArtwork();
+    document.querySelector('.scene-filter[data-category="all"]').click(); sceneButtons.get(state.scene).click(); document.querySelector(`.swatch[data-color="${state.palette}"]`).click();
+    for (const id of savedRanges) { $(id).value = state.controls[id]; $(id).dispatchEvent(new Event('input')); }
+    for (const id of savedToggles) $(id).checked = state.toggles[id];
+    elapsed = state.elapsed; vibrationPhase = state.phase; bass = 0; kick = 0; detail = 0; shockwaves.length = 0;
+    if (state.audio !== null) {
+      const asset = assets[state.audio];
+      audio.addEventListener('loadedmetadata', () => { audio.currentTime = Math.min(state.position, audio.duration); $('current-time').textContent = formatTime(audio.currentTime); $('seek').value = audio.currentTime / audio.duration * 1000; }, { once: true });
+      setTrack(asset.blob, asset.name);
+    } else { audio.removeAttribute('src'); audio.load(); if (url) URL.revokeObjectURL(url); url = null; trackBlob = null; trackName = ''; title = ''; $('track-title').textContent = 'No track selected'; $('track-subtitle').textContent = 'Ubaci pesmu ili poslušaj demo'; $('current-time').textContent = '0:00'; $('duration').textContent = '0:00'; $('seek').value = 0; }
+    applied = true; toast('Projekat je vraćen — pesma, slike, fontovi i podešavanja. Pritisni Play da nastaviš.');
+  } catch (error) { toast('Import nije uspeo. Postojeći projekat je sačuvan. ' + error.message); }
+  finally { event.target.value = ''; projectLock(false); if (!applied && wasPlaying) audio.play().catch(() => {}); }
+});
+document.querySelector('.import-button').addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); if (!projectBusy && !exporting) $('import-project').click(); } });
 const rgb = (alpha = 1) => `rgba(${color.join(',')},${alpha})`;
 function resize() { if (exporting) return; const rect = canvas.getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, 2); canvas.width = Math.round(rect.width * dpr); canvas.height = Math.round(rect.height * dpr); }
 new ResizeObserver(resize).observe($('stage'));
@@ -201,7 +259,7 @@ requestAnimationFrame(draw);
 const exportTypes = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/mp4;codecs=avc1.42002A,mp4a.40.2', 'video/mp4'];
 const mime = typeof MediaRecorder !== 'undefined' ? exportTypes.find(type => MediaRecorder.isTypeSupported(type)) : undefined;
 $('format').textContent = mime?.includes('mp4') ? 'MP4 / AAC' : 'WEBM / OPUS';
-function lockExport(lock) { exporting = lock; studio.setExporting(lock); ['play', 'seek', 'demo', 'audio-file', 'export'].forEach(id => $(id).disabled = lock); $('export-overlay').hidden = !lock; $('stage-state').textContent = lock ? 'RENDERING / 1440P' : 'PREVIEW MODE'; }
+function lockExport(lock) { exporting = lock; studio.setExporting(lock); ['play', 'seek', 'demo', 'audio-file', 'export', 'save-project', 'import-project'].forEach(id => $(id).disabled = lock); $('export-overlay').hidden = !lock; $('stage-state').textContent = lock ? 'RENDERING / 1440P' : 'PREVIEW MODE'; }
 $('export').addEventListener('click', async () => {
   if (exporting) return;
   if (!audio.src) { toast('Prvo ubaci pesmu ili izaberi demo.'); return; }
