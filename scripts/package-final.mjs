@@ -9,7 +9,7 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const output = process.argv[2] ? resolve(process.argv[2]) : join(root, 'desktop');
 const name = 'Indig0kid Visual Final Program';
 const current = await readFile(join(output, 'Vizual Indig0kid.html'), 'utf8');
-const html = current.replace('<title>Vizual Indig0kid — Artwork studio</title>', `<title>${name}</title>`);
+const html = current.replace(/<title>[^<]*<\/title>/, `<title>${name}</title>`);
 if (html === current) throw new Error('Unexpected application title; final packaging stopped.');
 const payload = gzipSync(Buffer.from(html, 'utf8')).toString('base64');
 if (gunzipSync(Buffer.from(payload, 'base64')).toString('utf8') !== html) throw new Error('Final payload verification failed.');
