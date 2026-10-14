@@ -18,6 +18,8 @@ On browsers supporting the File System Access API, the save dialog starts at Des
 
 ## Artwork and typography
 
+The centered header keeps branding outside the video. A tabbed inspector groups Audio, Visuals (bass/motion/palette), Artwork, and Text controls beside the preview on desktop, with responsive placement below it on smaller screens. All settings remain available; switching tabs does not interrupt playback or reset the project.
+
 The artwork editor adds a full-frame background and a circular cover in the center of any scene. Upload PNG, JPEG, WEBP, or AVIF (up to 25 MB); decoded images are capped at 2560 pixels on their longest edge to limit memory. Backgrounds fill the frame with a centered crop. Covers use a centered square crop inside a circle. Adjust background visibility and cover diameter; optional cover pulse follows bass, and the light ring uses the current palette. Remove buttons clear either image independently. A failed image replacement preserves the previous image.
 
 The text editor supports five independent multiline layers with font, color, size, position, alignment, letter spacing, bold, italic, and shadow. Text wraps to the video bounds; font size is expressed in pixels at 1440p and scales with the preview. Very long text shrinks to fit. The ten offered fonts include local font families and optional Google Fonts with local fallbacks. Upload TTF, OTF, WOFF, or WOFF2 files (up to 10 MB, ten custom fonts per session) to use your own fonts without network access.

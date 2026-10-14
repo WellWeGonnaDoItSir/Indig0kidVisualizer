@@ -20,6 +20,24 @@ const icons = {
 $('play').innerHTML = icons.play;
 $('export').querySelector('span').innerHTML = icons.arrow;
 $('demo').innerHTML = `${icons.play}<span>Probaj sa demo zvukom</span><span>${icons.arrow}</span>`;
+const controlTabs = [...document.querySelectorAll('.control-tab')];
+function selectControlTab(tab) {
+  for (const button of controlTabs) { const chosen = button === tab; button.classList.toggle('selected', chosen); button.setAttribute('aria-selected', String(chosen)); button.tabIndex = chosen ? 0 : -1; }
+  for (const panel of document.querySelectorAll('.control-panel')) panel.hidden = panel.id !== tab.dataset.panel;
+  document.querySelector('.inspector-body').scrollTop = 0;
+}
+controlTabs.forEach((tab, index) => {
+  tab.addEventListener('click', () => selectControlTab(tab));
+  tab.addEventListener('keydown', event => {
+    let next;
+    if (event.key === 'ArrowRight') next = controlTabs[(index + 1) % controlTabs.length];
+    if (event.key === 'ArrowLeft') next = controlTabs[(index - 1 + controlTabs.length) % controlTabs.length];
+    if (event.key === 'Home') next = controlTabs[0];
+    if (event.key === 'End') next = controlTabs.at(-1);
+    if (next) { event.preventDefault(); selectControlTab(next); next.focus(); }
+  });
+});
+
 document.querySelectorAll('.scene i').forEach(el => el.innerHTML = icons.arrow);
 const colors = { indigo: [167, 132, 255], mint: [104, 225, 205], rose: [244, 142, 185], amber: [244, 185, 105], ice: [205, 223, 255] };
 let color = colors.indigo, scene = 'orbit', audioContext, analyser, bassAnalyser, bassSamples, source, gain, recordingDestination;
