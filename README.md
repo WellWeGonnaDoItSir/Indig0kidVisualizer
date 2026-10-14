@@ -62,6 +62,8 @@ Vite prints its local development address. Use `npm run dev -- --port 3000` to c
 
 ## Export
 
+The preview canvas is the recorded video surface. Indig0kid and Sound into form branding, status labels, fullscreen controls, and export progress stay outside it in the website interface. No permanent website watermark is drawn into either MP4 or WebM exports. The optional Track title toggle and user-added artist/song text, images, and covers are still included when enabled.
+
 Export records the complete track from its beginning in real time at 2560 × 1440, requesting 60 fps, 20 Mb/s video, and 385 kb/s audio. The browser chooses the actual encoding rates and may drop frames on slow machines. Keep the tab visible throughout the export. Audio bitrate is a requested target, not a guaranteed constant bitrate.
 
 Chrome and Firefox generally export WebM with VP9/VP8 and Opus. MP4/AAC is used when supported instead. Unsupported browsers show an error. Cancel discards the in-progress recording. Export is held in memory until download, so very long tracks may require substantial RAM. For exact constant frame rate or mastering codec requirements, transcode the download with a dedicated video tool.

@@ -248,9 +248,8 @@ function draw(now) {
   renderScene(ctx, scene, { time: elapsed, intensity, impact, complexity, phase: vibrationPhase, color, width: w / scale, bins: audio.paused ? null : bins, samples: audio.paused ? null : fullSamples });
   studio.drawCover(ctx, intensity, impact);
   ctx.restore(); ctx.shadowBlur = 0;
-  // Canvas branding and title are included in the exported video.
+  // Only the optional audio title and user-added artwork/text are drawn into the video.
   ctx.fillStyle = 'rgba(201,188,223,.55)'; ctx.font = `${Math.max(9, h * 0.019)}px sans-serif`; ctx.textAlign = 'center';
-  ctx.fillText('I N D I G 0 K I D', w / 2, h * 0.89);
   if ($('show-title').checked && title) { ctx.fillStyle = 'rgba(185,170,211,.65)'; ctx.font = `${Math.max(8, h * 0.016)}px sans-serif`; ctx.fillText(title, w / 2, h * 0.935, w * 0.7); }
   studio.drawText(ctx, w, h);
   requestAnimationFrame(draw);
