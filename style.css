@@ -23,3 +23,5 @@ header.studio-header{display:grid;grid-template-columns:1fr;justify-items:center
 .preview-meta{display:flex;align-items:center;gap:12px;color:#8b7c9d;font-size:8px;letter-spacing:1.1px}.preview-meta .icon-button{border:1px solid #3e314b;border-radius:5px;font-size:18px;line-height:18px;padding:5px;color:#bda5d6}.preview-toolbar{min-height:28px}@media(max-width:900px){.transport{grid-row:3}.inspector{grid-row:4}.export-progress{grid-row:5}.stage-foot{grid-row:6}}@media(max-width:600px){.preview-meta{font-size:6px;gap:8px;letter-spacing:.5px}.preview-meta .icon-button{font-size:17px;padding:4px}}
 
 @media(max-width:900px){.stage-column>.section-label{grid-row:7}.gallery-toolbar{grid-row:8}.scenes{grid-row:9}.gallery-hint{grid-row:10}.note{grid-row:11}}
+
+.donate-button[aria-disabled="true"]{cursor:default}

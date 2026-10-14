@@ -8,7 +8,10 @@ if (SITE_CONFIG.donationUrl) {
   try {
     const destination = new URL(SITE_CONFIG.donationUrl);
     if (destination.protocol === 'https:' && !destination.username && !destination.password) {
-      $('donate-link').href = destination.href; $('donation-panel').hidden = false;
+      $('donate-link').href = destination.href;
+      $('donate-link').removeAttribute('aria-disabled');
+      $('donate-link').removeAttribute('title');
+      $('donation-pending').hidden = true;
     }
   } catch { /* Invalid or missing donation configuration never creates a dead payment link. */ }
 }
