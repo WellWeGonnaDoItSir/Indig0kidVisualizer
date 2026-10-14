@@ -10,3 +10,5 @@
 .preview-toolbar{position:static;left:auto;right:auto;top:auto;margin:0 2px 12px;pointer-events:auto}.preview-interface{position:static;left:auto;right:auto;bottom:auto;margin:14px 2px 0;pointer-events:auto}.export-progress{position:relative;left:auto;right:auto;bottom:auto;margin-top:12px}.stage:fullscreen canvas{width:100%;height:100%}
 
 .preview-interface{justify-content:flex-end}
+
+header.studio-header{height:auto;min-height:138px;padding:29px 0;gap:25px}.studio-header .wordmark{font-size:clamp(34px,3.8vw,56px);font-weight:700;letter-spacing:-1.8px;line-height:1.1}.studio-header .wordmark-sub{display:block;margin:12px 0 0;font-size:9px;letter-spacing:3px;line-height:1.4;font-weight:400}.studio-header .header-right{flex-shrink:0}@media(max-width:700px){header.studio-header{min-height:0;padding:24px 0;flex-direction:column;align-items:flex-start;gap:16px}.studio-header .wordmark{font-size:clamp(27px,6.9vw,43px);letter-spacing:-1px}.studio-header .wordmark-sub{font-size:8px;letter-spacing:2.2px;margin-top:9px}}
