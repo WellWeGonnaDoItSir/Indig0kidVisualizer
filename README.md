@@ -8,7 +8,7 @@ A local, bass-reactive music visualizer with 20 animated scenes, color palettes,
 
 The `.github/workflows/deploy-pages.yml` workflow runs on pushes to `main` and supports manual dispatch. It installs dependencies with `npm ci`, validates the JavaScript and project-save tests, runs `npm run build`, uploads only `dist/`, and deploys the artifact with GitHub Pages. Deployment uses the workflow's automatic token and does not require payment keys or a personal token in source. In repository **Settings → Pages**, select **GitHub Actions** as the build/deployment source. A successful push is not proof of a live website: check the workflow deployment result. The intended URL is `https://wellwegonnadoitsir.github.io/Indig0kidVisualizer/`. Private repositories may require a GitHub plan that supports Pages; repository visibility is preserved.
 
-All visualizer functions remain free. To activate the optional **Donate 1$ if you want 😄** link, set `donationUrl` in `site-config.js` to the owner's actual public HTTPS payment page and republish. Without a real link the header button remains visible as a disabled placeholder with a “coming soon” tooltip; it does not initiate a payment. Never store card numbers, bank-account numbers, passwords, or payment API keys in this public configuration. Payment is handled entirely by the external provider; its fees and supported amounts apply. There are no paywalls or payment forms in the application.
+All visualizer functions remain free. To activate the optional **Donate 1$ if you want 😄** link, set `donationUrl` in `site-config.js` to the owner's actual public HTTPS payment page and republish. Without a real link the donation section stays hidden. Never store card numbers, bank-account numbers, passwords, or payment API keys in this public configuration. Payment is handled entirely by the external provider; its fees and supported amounts apply. There are no paywalls or payment forms in the application.
 
 ## Save and resume without an account
 
@@ -24,11 +24,11 @@ The artwork editor adds a full-frame background and a circular cover in the cent
 
 The text editor supports five independent multiline layers with font, color, size, position, alignment, letter spacing, bold, italic, and shadow. Text wraps to the video bounds; font size is expressed in pixels at 1440p and scales with the preview. Very long text shrinks to fit. The ten offered fonts include local font families and optional Google Fonts with local fallbacks. Upload TTF, OTF, WOFF, or WOFF2 files (up to 10 MB, ten custom fonts per session) to use your own fonts without network access.
 
-Background, cover, and text are drawn directly onto the recording canvas and appear in fullscreen and video exports. Export waits for pending image/font loads and locks scene selection, visual settings, artwork/text editing, format selection and project actions until finished or canceled. Listening volume, fullscreen and cancellation remain available. Disabled editor controls retain their previous state after cancellation or completion. Uploaded images, fonts, text, and audio stay in browser memory. Save project writes them to a local .indig0kid file; Import save restores them after reopening. They are not written to the application HTML or sent to a server.
+Background, cover, and text are drawn directly onto the recording canvas and appear in fullscreen and video exports. Export waits for pending image/font loads and locks the artwork/text editors until finished or canceled. Uploaded images, fonts, text, and audio stay in browser memory. Save project writes them to a local .indig0kid file; Import save restores them after reopening. They are not written to the application HTML or sent to a server.
 
 ## Scenes
 
-The gallery has rendered static thumbnails, category filters, text search by scene name/mood/category, a matching-scene count, an empty state and a random visible scene picker. Each preset uses its own procedural renderer, reacts to the shared bass/kick engine, and works with all five color palettes. Selecting a style preserves audio playback. Scroll the gallery to explore all 20.
+The gallery has live-rendered static thumbnails and category filters. Each preset uses its own procedural renderer, reacts to the shared bass/kick engine, and works with all five color palettes. Selecting a style preserves audio playback. Scroll the gallery to explore all 20.
 
 | Category | Presets |
 | --- | --- |
@@ -38,12 +38,6 @@ The gallery has rendered static thumbnails, category filters, text search by sce
 | Electric | After hours, Bass crown, Pulse line, Signal error, Neon rain |
 
 Visual direction was informed by the procedural preset approach documented in [projectM](https://github.com/projectM-visualizer/projectm) and [Butterchurn/MilkDrop](https://github.com/jberg/butterchurn). The renderers here are original Canvas scenes; no third-party presets or renderer libraries are bundled. These references describe established visualizer approaches, rather than a ranking of current trends.
-
-## Studio guide and frame capture
-
-Quick guide and the sidebar help button open an accessible modal with workflow steps and keyboard shortcuts. Space toggles playback, F opens fullscreen, / focuses scene search and ? opens the guide. Shortcuts do not intercept typing or focused interactive controls and are inactive during export/project operations. The footer FAQ explains local files, project saves and real-time recording.
-
-The camera button downloads the current canvas as a PNG at its current preview resolution. It includes user artwork/text and no website interface; it does not promise a 1440p still. Video export always requests 2560 × 1440. An estimate based on the requested combined video/audio bitrate shows approximate download size and recording time; actual output size varies by encoder.
 
 ## Windows Desktop version
 
@@ -74,7 +68,7 @@ The preview canvas is the recorded video surface. Indig0kid and Sound into form 
 
 Export records the complete track from its beginning in real time at 2560 × 1440, requesting 60 fps, 20 Mb/s video, and 385 kb/s audio. The browser chooses the actual encoding rates and may drop frames on slow machines. Keep the tab visible throughout the export. Audio bitrate is a requested target, not a guaranteed constant bitrate.
 
-Chrome and Firefox generally export WebM with VP9/VP8 and Opus. The format selector also offers MP4 when MediaRecorder reports support. The browser chooses supported codecs for generic MP4 fallback; AAC is not guaranteed. Browsers without recording support show an unavailable status and disable video export. Cancel discards the in-progress recording. Export is held in memory until download, so very long tracks may require substantial RAM. For exact constant frame rate or mastering codec requirements, transcode the download with a dedicated video tool.
+Chrome and Firefox generally export WebM with VP9/VP8 and Opus. MP4/AAC is used when supported instead. Unsupported browsers show an error. Cancel discards the in-progress recording. Export is held in memory until download, so very long tracks may require substantial RAM. For exact constant frame rate or mastering codec requirements, transcode the download with a dedicated video tool.
 
 Fullscreen requires browser support and a user gesture. Font loading uses Google Fonts, with local sans-serif fallbacks when offline.
 

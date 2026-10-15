@@ -20,7 +20,6 @@ const icons = {
   pause: '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 4h4v16H6zm8 0h4v16h-4z"/></svg>',
   arrow: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 19 19 5M5 5h14v14"/></svg>'
 };
-$('random-scene').innerHTML = `${icons.arrow}<span>Surprise me</span>`;
 $('play').innerHTML = icons.play;
 $('export').querySelector('span').innerHTML = icons.arrow;
 $('demo').innerHTML = `${icons.play}<span>Probaj sa demo zvukom</span><span>${icons.arrow}</span>`;
@@ -78,13 +77,13 @@ async function play() {
   if (!audio.src) { await loadDemo(); }
   setupAudio(); await audioContext.resume(); await audio.play();
 }
-$('play').addEventListener('click', async () => { if (exporting || projectBusy) return; try { if (audio.paused) await play(); else audio.pause(); } catch { toast('Zvuk nije moguće pokrenuti. Probaj drugi audio fajl.'); } });
-audio.addEventListener('play', () => { $('play').innerHTML = icons.pause; $('play').setAttribute('aria-label', 'Pause'); $('stage-state').textContent = exporting ? 'RENDERING / 1440P' : 'AUDIO REACTIVE'; });
+$('play').addEventListener('click', async () => { if (exporting) return; try { if (audio.paused) await play(); else audio.pause(); } catch { toast('Zvuk nije moguće pokrenuti. Probaj drugi audio fajl.'); } });
+audio.addEventListener('play', () => { $('play').innerHTML = icons.pause; $('play').setAttribute('aria-label', 'Pause'); $('stage-state').textContent = 'AUDIO REACTIVE'; });
 audio.addEventListener('pause', () => { $('play').innerHTML = icons.play; $('play').setAttribute('aria-label', 'Play'); if (!exporting) $('stage-state').textContent = 'PREVIEW MODE'; });
-audio.addEventListener('loadedmetadata', () => { $('duration').textContent = formatTime(audio.duration); $('seek').disabled = exporting || !Number.isFinite(audio.duration); updateExportEstimate(); });
+audio.addEventListener('loadedmetadata', () => { $('duration').textContent = formatTime(audio.duration); });
 audio.addEventListener('timeupdate', () => { $('current-time').textContent = formatTime(audio.currentTime); $('seek').value = audio.duration ? audio.currentTime / audio.duration * 1000 : 0; if (exporting) $('export-status').textContent = `Export ${Math.floor(audio.currentTime / audio.duration * 100)}% · ${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`; });
 audio.addEventListener('ended', () => { if (exporting && recorder?.state === 'recording') recorder.stop(); });
-audio.addEventListener('error', () => { toast('Ovaj audio format nije podržan. Probaj MP3 ili WAV.'); if (exporting) { exportCancelled = true; if (recorder?.state === 'recording') recorder.stop(); else finishExport(); } });
+audio.addEventListener('error', () => { toast('Ovaj audio format nije podržan. Probaj MP3 ili WAV.'); if (exporting) { exportCancelled = true; recorder?.stop(); } });
 $('seek').addEventListener('input', () => { if (!exporting && Number.isFinite(audio.duration)) audio.currentTime = Number($('seek').value) / 1000 * audio.duration; });
 $('volume').addEventListener('input', () => { if (gain) gain.gain.value = Number($('volume').value); $('mute').textContent = Number($('volume').value) ? '♫' : '×'; });
 $('mute').addEventListener('click', () => { const value = Number($('volume').value); if (value) previousVolume = value; $('volume').value = value ? 0 : previousVolume; $('volume').dispatchEvent(new Event('input')); });
@@ -93,19 +92,15 @@ function setTrack(blob, name) {
   audio.pause(); bass = 0; detail = 0; bassBaseline = 0; previousBass = 0; kick = 0; hitCooldown = 0; shockwaves.length = 0;
   if (url) URL.revokeObjectURL(url); url = URL.createObjectURL(blob); audio.src = url; audio.load();
   trackBlob = blob; trackName = name;
-  title = name.replace(/\.[^.]+$/, ''); $('track-title').textContent = title; $('track-subtitle').textContent = 'LOCAL AUDIO / READY TO PLAY'; $('current-time').textContent = '0:00'; $('duration').textContent = '0:00'; $('seek').value = 0; $('seek').disabled = true;
-  $('upload-hint').textContent = 'Replace track · files stay on your device';
-  $('drop-zone').querySelector('strong').textContent = 'Your sound is loaded';
-  $('track-title').title = title;
+  title = name.replace(/\.[^.]+$/, ''); $('track-title').textContent = title; $('track-subtitle').textContent = 'LOCAL AUDIO / READY TO PLAY'; $('current-time').textContent = '0:00'; $('duration').textContent = '0:00'; $('seek').value = 0;
 }
 async function loadFile(file) {
   if (!file || exporting || projectBusy) return;
   if (!file.type.startsWith('audio/') && !/\.(mp3|wav|flac|m4a|ogg|aac|aiff|opus)$/i.test(file.name)) { toast('Izaberi audio fajl.'); return; }
-  $('audio-file').value = ''; setTrack(file, file.name); try { await play(); } catch { toast('Pesma je učitana. Pritisni Play ili probaj drugi format.'); }
+  setTrack(file, file.name); try { await play(); } catch { toast('Pesma je učitana. Pritisni Play ili probaj drugi format.'); }
 }
 $('audio-file').addEventListener('change', event => loadFile(event.target.files[0]));
 const drop = $('drop-zone');
-drop.addEventListener('keydown', event => { if (event.target === drop && ['Enter', ' '].includes(event.key)) { event.preventDefault(); if (!exporting && !projectBusy) $('audio-file').click(); } });
 ['dragenter', 'dragover'].forEach(type => drop.addEventListener(type, event => { event.preventDefault(); drop.classList.add('dragging'); }));
 ['dragleave', 'drop'].forEach(type => drop.addEventListener(type, event => { event.preventDefault(); drop.classList.remove('dragging'); }));
 drop.addEventListener('drop', event => loadFile(event.dataTransfer.files[0]));
@@ -125,7 +120,7 @@ async function loadDemo() {
   }
   setTrack(new Blob([data], { type: 'audio/wav' }), 'Indig0kid — Midnight demo');
 }
-$('demo').addEventListener('click', async () => { if (exporting || projectBusy) return; try { await loadDemo(); await play(); } catch { toast('Pritisni Play da pokreneš demo.'); } });
+$('demo').addEventListener('click', async () => { if (exporting) return; try { await loadDemo(); await play(); } catch { toast('Pritisni Play da pokreneš demo.'); } });
 for (const id of ['bass', 'detail', 'smooth']) $(id).addEventListener('input', () => $(id + '-value').textContent = $(id).value + '%');
 const sceneButtons = new Map();
 const previewBins = Uint8Array.from({ length: 1024 }, (_, i) => Math.max(0, 160 - i * 0.45 + Math.sin(i * 0.14) * 65));
@@ -143,7 +138,6 @@ for (const [index, preset] of SCENES.entries()) {
   button.setAttribute('aria-label', `${String(index + 1).padStart(2, '0')}. ${preset.name}, ${preset.mood}`);
   button.innerHTML = `<canvas class="scene-art scene-thumbnail" width="300" height="160" aria-hidden="true"></canvas><span><strong>${preset.name}</strong><small>${String(index + 1).padStart(2, '0')} / ${preset.mood}</small></span><i>${icons.arrow}</i>`;
   button.addEventListener('click', () => {
-    if (exporting) return;
     scene = preset.id;
     for (const b of sceneButtons.values()) { b.classList.toggle('selected', b === button); b.setAttribute('aria-pressed', String(b === button)); }
     $('scene-name').textContent = `${String(index + 1).padStart(2, '0')} / ${preset.name.toUpperCase()}`;
@@ -151,31 +145,14 @@ for (const [index, preset] of SCENES.entries()) {
   });
   sceneButtons.set(preset.id, button); $('scene-gallery').append(button); drawScenePreview(button);
 }
-let sceneCategory = 'all';
-function filterScenes() {
-  const query = $('scene-search').value.trim().toLowerCase(); let count = 0;
-  for (const preset of SCENES) {
-    const button = sceneButtons.get(preset.id);
-    button.hidden = (sceneCategory !== 'all' && preset.category !== sceneCategory) || !`${preset.name} ${preset.mood} ${preset.category}`.toLowerCase().includes(query);
-    if (!button.hidden) count++;
-  }
-  $('scene-count').textContent = `${count} / ${SCENES.length} SCENES`;
-  $('scene-empty').hidden = count > 0;
-  $('random-scene').disabled = exporting || count === 0;
-  $('scene-gallery').scrollTop = 0;
-}
 document.querySelectorAll('.scene-filter').forEach(button => button.addEventListener('click', () => {
-  if (exporting) return;
   for (const filter of document.querySelectorAll('.scene-filter')) { filter.classList.toggle('selected', filter === button); filter.setAttribute('aria-pressed', String(filter === button)); }
-  sceneCategory = button.dataset.category; filterScenes();
+  let count = 0;
+  for (const b of sceneButtons.values()) { b.hidden = button.dataset.category !== 'all' && b.dataset.category !== button.dataset.category; if (!b.hidden) count++; }
+  $('scene-count').textContent = button.dataset.category === 'all' ? '20 SCENES' : `${String(count).padStart(2, '0')} / 20 SCENES`;
+  $('scene-gallery').scrollTop = 0;
 }));
-$('scene-search').addEventListener('input', filterScenes);
-$('random-scene').addEventListener('click', () => {
-  if (exporting || projectBusy) return;
-  const visible = [...sceneButtons.values()].filter(button => !button.hidden && button.dataset.scene !== scene);
-  if (visible.length) { const choice = visible[Math.floor(Math.random() * visible.length)]; choice.click(); choice.scrollIntoView({ block: 'nearest' }); }
-});
-document.querySelectorAll('.swatch').forEach(button => button.addEventListener('click', () => { if (exporting) return; color = colors[button.dataset.color]; $('palette-name').textContent = button.dataset.color.toUpperCase(); for (const b of sceneButtons.values()) drawScenePreview(b); document.querySelectorAll('.swatch').forEach(b => { b.classList.toggle('selected', b === button); b.setAttribute('aria-pressed', String(b === button)); }); }));
+document.querySelectorAll('.swatch').forEach(button => button.addEventListener('click', () => { color = colors[button.dataset.color]; $('palette-name').textContent = button.dataset.color.toUpperCase(); for (const b of sceneButtons.values()) drawScenePreview(b); document.querySelectorAll('.swatch').forEach(b => { b.classList.toggle('selected', b === button); b.setAttribute('aria-pressed', String(b === button)); }); }));
 $('fullscreen').addEventListener('click', async () => { try { if (document.fullscreenElement) await document.exitFullscreen(); else await $('stage').requestFullscreen(); } catch { toast('Fullscreen nije dostupan u ovom browseru.'); } });
 const savedRanges = ['bass', 'detail', 'smooth', 'volume'];
 const savedToggles = ['particles', 'show-title'];
@@ -219,7 +196,7 @@ $('import-project').addEventListener('change', async event => {
     await validateSavedAudio(state.audio === null ? null : assets[state.audio]);
     const applyArtwork = await studio.prepareRestore(state.studio, assets);
     applyArtwork();
-    $('scene-search').value = ''; document.querySelector('.scene-filter[data-category="all"]').click(); sceneButtons.get(state.scene).click(); document.querySelector(`.swatch[data-color="${state.palette}"]`).click();
+    document.querySelector('.scene-filter[data-category="all"]').click(); sceneButtons.get(state.scene).click(); document.querySelector(`.swatch[data-color="${state.palette}"]`).click();
     for (const id of savedRanges) { $(id).value = state.controls[id]; $(id).dispatchEvent(new Event('input')); }
     for (const id of savedToggles) $(id).checked = state.toggles[id];
     elapsed = state.elapsed; vibrationPhase = state.phase; bass = 0; kick = 0; detail = 0; shockwaves.length = 0;
@@ -227,7 +204,7 @@ $('import-project').addEventListener('change', async event => {
       const asset = assets[state.audio];
       audio.addEventListener('loadedmetadata', () => { audio.currentTime = Math.min(state.position, audio.duration); $('current-time').textContent = formatTime(audio.currentTime); $('seek').value = audio.currentTime / audio.duration * 1000; }, { once: true });
       setTrack(asset.blob, asset.name);
-    } else { audio.removeAttribute('src'); audio.load(); if (url) URL.revokeObjectURL(url); url = null; trackBlob = null; trackName = ''; title = ''; $('track-title').textContent = 'No track selected'; $('track-subtitle').textContent = 'Ubaci pesmu ili poslušaj demo'; $('track-title').removeAttribute('title'); $('drop-zone').querySelector('strong').textContent = 'Drop your sound here'; $('upload-hint').textContent = 'Choose a file or drop it here'; $('seek').disabled = true; updateExportEstimate(); $('current-time').textContent = '0:00'; $('duration').textContent = '0:00'; $('seek').value = 0; }
+    } else { audio.removeAttribute('src'); audio.load(); if (url) URL.revokeObjectURL(url); url = null; trackBlob = null; trackName = ''; title = ''; $('track-title').textContent = 'No track selected'; $('track-subtitle').textContent = 'Ubaci pesmu ili poslušaj demo'; $('current-time').textContent = '0:00'; $('duration').textContent = '0:00'; $('seek').value = 0; }
     applied = true; toast('Projekat je vraćen — pesma, slike, fontovi i podešavanja. Pritisni Play da nastaviš.');
   } catch (error) { toast('Import nije uspeo. Postojeći projekat je sačuvan. ' + error.message); }
   finally { event.target.value = ''; projectLock(false); if (!applied && wasPlaying) audio.play().catch(() => {}); }
@@ -300,43 +277,11 @@ function draw(now) {
 }
 requestAnimationFrame(draw);
 const exportTypes = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/mp4;codecs=avc1.42002A,mp4a.40.2', 'video/mp4'];
-const supportedTypes = typeof MediaRecorder !== 'undefined' ? exportTypes.filter(type => MediaRecorder.isTypeSupported(type)) : [];
-const availableFormats = [supportedTypes.find(type => type.includes('webm')), supportedTypes.find(type => type.includes('mp4'))].filter(Boolean);
-for (const type of availableFormats) $('export-format').add(new Option(type.includes('mp4') ? 'MP4' : 'WebM', type));
-let mime = availableFormats[0];
-function updateExportEstimate() {
-  const minutes = Number.isFinite(audio.duration) ? audio.duration / 60 : 0;
-  $('export-estimate').textContent = minutes > 0 ? `Approx. ${Math.ceil(audio.duration * 20385000 / 8 / 1000000)} MB · ${formatTime(audio.duration)} to record. Actual size varies.` : 'Upload a track to estimate export size.';
-}
-function updateFormat() {
-  mime = $('export-format').value || undefined;
-  $('format').textContent = mime ? (mime.includes('mp4') ? 'MP4 · browser codec' : 'WEBM / OPUS') : 'VIDEO EXPORT UNAVAILABLE';
-  $('export-format').disabled = !mime;
-  $('export').disabled = !mime || !canvas.captureStream;
-  updateExportEstimate();
-}
-$('export-format').addEventListener('change', updateFormat); updateFormat();
-const exportDisabled = new Map();
-function lockExport(lock) {
-  exporting = lock; studio.setExporting(lock);
-  if (lock) {
-    exportDisabled.clear();
-    document.querySelectorAll('.workspace input, .workspace button, .workspace select, .project-actions button, #import-project').forEach(element => {
-      if (['cancel-export', 'fullscreen', 'mute', 'volume'].includes(element.id)) return;
-      exportDisabled.set(element, element.disabled); element.disabled = true;
-    });
-  } else {
-    for (const [element, disabled] of exportDisabled) element.disabled = disabled;
-    exportDisabled.clear();
-    $('seek').disabled = !audio.src || !Number.isFinite(audio.duration);
-  }
-  document.querySelector('.inspector-body').inert = lock;
-  document.querySelector('.import-button').setAttribute('aria-disabled', String(lock));
-  $('export-overlay').hidden = !lock;
-  $('stage-state').textContent = lock ? 'RENDERING / 1440P' : 'PREVIEW MODE';
-}
+const mime = typeof MediaRecorder !== 'undefined' ? exportTypes.find(type => MediaRecorder.isTypeSupported(type)) : undefined;
+$('format').textContent = mime?.includes('mp4') ? 'MP4 / AAC' : 'WEBM / OPUS';
+function lockExport(lock) { exporting = lock; studio.setExporting(lock); ['play', 'seek', 'demo', 'audio-file', 'export', 'save-project', 'import-project'].forEach(id => $(id).disabled = lock); $('export-overlay').hidden = !lock; $('stage-state').textContent = lock ? 'RENDERING / 1440P' : 'PREVIEW MODE'; }
 $('export').addEventListener('click', async () => {
-  if (exporting || projectBusy) return;
+  if (exporting) return;
   if (!audio.src) { toast('Prvo ubaci pesmu ili izaberi demo.'); return; }
   if (!mime || !canvas.captureStream) { toast('Ovaj browser ne podržava video export. Koristi noviji Chrome ili Firefox.'); return; }
   if (!Number.isFinite(audio.duration) || !audio.duration) { toast('Sačekaj da se pesma učita ili probaj drugi format.'); return; }
@@ -344,23 +289,17 @@ $('export').addEventListener('click', async () => {
   try {
     lockExport(true); $('export-status').textContent = 'Priprema slika i fontova…'; await studio.ready();
     if (generation !== exportGeneration || !exporting) return;
-    setupAudio(); await audioContext.resume();
-    if (generation !== exportGeneration || !exporting) return;
-    audio.pause(); audio.currentTime = 0;
-    canvas.width = 2560; canvas.height = 1440; exportCancelled = false; chunks = [];
+    setupAudio(); await audioContext.resume(); audio.pause(); audio.currentTime = 0;
+    lockExport(true); canvas.width = 2560; canvas.height = 1440; exportCancelled = false; chunks = [];
     exportStream = canvas.captureStream(60); recordingDestination.stream.getAudioTracks().forEach(track => exportStream.addTrack(track));
     recorder = new MediaRecorder(exportStream, { mimeType: mime, videoBitsPerSecond: 20000000, audioBitsPerSecond: 385000 });
     recorder.ondataavailable = event => { if (event.data.size) chunks.push(event.data); };
     recorder.onerror = () => { exportCancelled = true; toast('Export nije uspeo. Probaj kraću pesmu ili drugi browser.'); if (recorder.state !== 'inactive') recorder.stop(); else finishExport(); };
     recorder.onstop = finishExport;
-    // Wait for a full 1440p draw after resizing, so the first frame is not blank.
-    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-    if (generation !== exportGeneration || !exporting) return;
     recorder.start(1000); await audio.play();
     $('export-status').textContent = 'Export 0% · rendering in real time';
     toast('Export je počeo. Ostavi ovu karticu aktivnom do kraja pesme.');
   } catch (error) {
-    if (generation !== exportGeneration) return;
     exportCancelled = true;
     if (recorder?.state === 'recording') recorder.stop(); else finishExport();
     toast('Export nije moguće pokrenuti: ' + error.message);
@@ -375,37 +314,7 @@ function finishExport() {
     document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(downloadUrl), 60000);
     toast('Video je spreman: 2560 × 1440, cilj 60 fps i audio 385 kb/s.');
   }
-  chunks = []; recorder = null; exportStream = null; lockExport(false); resize();
+  chunks = []; lockExport(false); resize();
 }
-$('cancel-export').addEventListener('click', () => { exportCancelled = true; if (recorder?.state === 'recording') recorder.stop(); else finishExport(); toast('Export je otkazan. Podešavanja ostaju u studiju.'); });
+$('cancel-export').addEventListener('click', () => { exportCancelled = true; if (recorder?.state === 'recording') recorder.stop(); else finishExport(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden && exporting) toast('Vrati se na ovu karticu: browser može usporiti video u pozadini.'); });
-
-const helpDialog = $('help-dialog');
-document.querySelectorAll('[data-open-help]').forEach(button => button.addEventListener('click', () => helpDialog.showModal()));
-$('close-help').addEventListener('click', () => helpDialog.close());
-$('guide-start').addEventListener('click', () => { helpDialog.close(); selectControlTab($('tab-audio')); $('drop-zone').focus(); });
-helpDialog.addEventListener('click', event => { if (event.target === helpDialog) { const rect = helpDialog.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) helpDialog.close(); } });
-$('snapshot').addEventListener('click', async () => {
-  if (exporting || projectBusy) return;
-  try {
-    await studio.ready();
-    await new Promise(resolve => requestAnimationFrame(resolve));
-    if (exporting || projectBusy) return;
-    const frameWidth = canvas.width, frameHeight = canvas.height;
-    canvas.toBlob(blob => {
-      if (!blob) { toast('Unable to capture this frame. Try again.'); return; }
-      const link = document.createElement('a'), frameUrl = URL.createObjectURL(blob);
-      link.href = frameUrl; link.download = 'Indig0kid-frame.png'; document.body.append(link); link.click(); link.remove();
-      setTimeout(() => URL.revokeObjectURL(frameUrl), 60000);
-      toast(`PNG frame downloaded · ${frameWidth} × ${frameHeight}. Video export remains 1440p.`);
-    }, 'image/png');
-  } catch { toast('Unable to capture this frame. Please try again.'); }
-});
-document.addEventListener('keydown', event => {
-  if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || projectBusy || exporting || helpDialog.open) return;
-  if (event.target.closest('input, textarea, select, button, a, [role="button"], [contenteditable="true"]')) return;
-  if (event.code === 'Space') { event.preventDefault(); $('play').click(); }
-  else if (event.key.toLowerCase() === 'f') { event.preventDefault(); $('fullscreen').click(); }
-  else if (event.key === '/') { event.preventDefault(); $('scene-search').focus(); $('scene-search').scrollIntoView({ block: 'center' }); }
-  else if (event.key === '?') { event.preventDefault(); helpDialog.showModal(); }
-});
